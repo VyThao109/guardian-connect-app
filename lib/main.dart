@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:guardian_connect_app/bloc/root_bloc.dart';
 import 'package:guardian_connect_app/common/extensions/custom_theme_extension.dart';
 import 'package:guardian_connect_app/common/routes/routes.dart';
+import 'package:guardian_connect_app/core/data/local_storage.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Storage.setup();
   runApp(MyApp(navigatorKey));
 }
 
@@ -15,17 +20,26 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      navigatorKey: navigatorKey,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: context.theme.primaryColor ?? Colors.blue,
+    return BlocProvider(
+      create: (_) => RootBloc()..add(const InitializeAppEvent()),
+      child: MaterialApp(
+        debugShowCheckedModeBanner: false,
+        navigatorKey: navigatorKey,
+        theme: ThemeData(
+          fontFamily: GoogleFonts.inter().fontFamily,
+          extensions: [CustomThemeExtension.lightMode],
+          colorScheme: ColorScheme.fromSeed(
+            seedColor:
+                CustomThemeExtension.lightMode.primaryColor ?? Colors.blue,
+          ),
+          textTheme: Theme.of(
+            context,
+          ).textTheme.apply(fontSizeFactor: 1, fontSizeDelta: 0.0),
+          scaffoldBackgroundColor: Colors.white,
         ),
-        fontFamily: GoogleFonts.roboto().fontFamily,
+        onGenerateRoute: Routes.onGenerateRoute,
+        initialRoute: Routes.root,
       ),
-      onGenerateRoute: Routes.onGenerateRoute,
-      initialRoute: Routes.root,
     );
   }
 }
