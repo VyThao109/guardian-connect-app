@@ -32,7 +32,7 @@ class RootState extends Equatable {
       currentLocation: null,
       lastUpdate: null,
       address: null,
-      isSOS: false,
+      isSOS: true,
       companionPhoneNumber: Storage.companionPhoneNumber,
     );
   }
@@ -87,6 +87,8 @@ class RootState extends Equatable {
     gpsStatus,
     currentLocation,
     lastUpdate,
+    address,
+    isSOS,
     companionPhoneNumber,
   ];
 }

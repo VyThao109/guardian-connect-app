@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_vector_icons/flutter_vector_icons.dart';
-import 'package:flutter_vlc_player/flutter_vlc_player.dart';
 import 'package:guardian_connect_app/bloc/root_bloc.dart';
 import 'package:guardian_connect_app/common/extensions/custom_theme_extension.dart';
 import 'package:guardian_connect_app/common/extensions/font_sizes.dart';
-import 'package:guardian_connect_app/helpers/functions.dart';
+import 'package:guardian_connect_app/utils/functions.dart';
 import 'package:guardian_connect_app/presentations/widgets/button/dual_action_buttons.dart';
+import 'package:guardian_connect_app/presentations/widgets/stream_player/stream_player.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -19,51 +19,18 @@ class HomeTab extends StatefulWidget {
 }
 
 class _HomeTabState extends State<HomeTab> {
-  VlcPlayerController? _videoPlayerController;
   final MapController _mapController = MapController();
   bool mapReady = false;
-
-  void initializeVideoPlayer() {
-    // URL stream từ Raspberry Pi
-    // Có thể dùng RTSP: rtsp://192.168.1.100:8554/stream
-    // Hoặc MJPEG: http://192.168.1.100:8080/stream
-    _videoPlayerController = VlcPlayerController.network(
-      'http://192.168.1.100:8080/stream', // Thay bằng IP Raspberry Pi của bạn
-      hwAcc: HwAcc.full,
-      autoPlay: false,
-      options: VlcPlayerOptions(),
-    );
-  }
-
-  void toggleStream() {
-    final bloc = context.read<RootBloc>();
-    final currentStatus = bloc.state.cameraStatus;
-
-    if (currentStatus == ConnectionStatus.connected) {
-      _videoPlayerController?.pause();
-      bloc.add(const DisconnectCameraEvent());
-    } else {
-      _videoPlayerController?.play();
-      bloc.add(const ConnectCameraEvent());
-    }
-  }
 
   @override
   void initState() {
     super.initState();
-    initializeVideoPlayer();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       setState(() {
         mapReady = true;
       });
     });
-  }
-
-  @override
-  void dispose() {
-    _videoPlayerController?.dispose();
-    super.dispose();
   }
 
   @override
@@ -163,70 +130,8 @@ class _HomeTabState extends State<HomeTab> {
           Column(
             spacing: 12,
             children: [
-              Container(
-                height: 200,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF1a1a1a),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: _videoPlayerController != null
-                    ? ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: VlcPlayer(
-                          controller: _videoPlayerController!,
-                          aspectRatio: 16 / 9,
-                          placeholder: Container(
-                            decoration: BoxDecoration(color: Color(0XFF101828)),
-                            child: Center(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.videocam_off,
-                                    size: 64,
-                                    color: Colors.grey,
-                                  ),
-                                  SizedBox(height: 16),
-                                  Text(
-                                    'Camera preview stopped',
-                                    style: TextStyle(
-                                      color: Color(0XFF99A1AF),
-                                      fontSize: FontSizes.large,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                  Text(
-                                    'Click Start to preview',
-                                    style: TextStyle(
-                                      color: context.theme.grayTextColor,
-                                      fontSize: FontSizes.small,
-                                      fontWeight: FontWeight.normal,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      )
-                    : const Center(child: CircularProgressIndicator()),
-              ),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: toggleStream,
-                  icon: Icon(isStreaming ? Icons.videocam_off : Icons.videocam),
-                  label: Text(isStreaming ? 'Stop Preview' : 'Start Preview'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: context.theme.primaryColor,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.all(4),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                ),
-              ),
+              StreamPlayer(),
+
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
@@ -430,7 +335,7 @@ class _HomeTabState extends State<HomeTab> {
           textAlign: TextAlign.left,
         ),
         DualActionButtons(
-          label1: "Reach Companion",
+          label1: "Reach companion",
           label2: "Emergency call",
           icon1: Ionicons.call_outline,
           icon2: AntDesign.warning,

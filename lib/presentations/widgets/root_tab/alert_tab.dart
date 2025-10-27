@@ -4,7 +4,7 @@ import 'package:flutter_vector_icons/flutter_vector_icons.dart';
 import 'package:guardian_connect_app/bloc/root_bloc.dart';
 import 'package:guardian_connect_app/common/extensions/custom_theme_extension.dart';
 import 'package:guardian_connect_app/common/extensions/font_sizes.dart';
-import 'package:guardian_connect_app/helpers/functions.dart';
+import 'package:guardian_connect_app/utils/functions.dart';
 import 'package:guardian_connect_app/presentations/widgets/button/dual_action_buttons.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -69,6 +69,9 @@ class _AlertTabState extends State<AlertTab> with TickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<RootBloc, RootState>(
+      buildWhen: (previous, current) {
+        return previous.isSOS != current.isSOS;
+      },
       builder: (context, state) {
         return SingleChildScrollView(
           child: Column(
@@ -158,7 +161,11 @@ class _AlertTabState extends State<AlertTab> with TickerProviderStateMixin {
                           SizedBox(
                             width: double.infinity,
                             child: ElevatedButton.icon(
-                              onPressed: () {},
+                              onPressed: () {
+                                context.read<RootBloc>().add(
+                                  ClearEmergencyEvent(),
+                                );
+                              },
                               icon: Icon(MaterialCommunityIcons.refresh),
                               label: Text("Reset alert"),
                               style: ElevatedButton.styleFrom(
@@ -201,7 +208,7 @@ class _AlertTabState extends State<AlertTab> with TickerProviderStateMixin {
           textAlign: TextAlign.left,
         ),
         DualActionButtons(
-          label1: "Reach Companion",
+          label1: "Reach companion",
           label2: "Emergency call",
           icon1: Ionicons.call_outline,
           icon2: AntDesign.warning,

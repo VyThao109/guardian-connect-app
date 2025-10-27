@@ -5,6 +5,7 @@ import 'package:guardian_connect_app/bloc/root_bloc.dart';
 import 'package:guardian_connect_app/common/extensions/custom_theme_extension.dart';
 import 'package:guardian_connect_app/common/routes/routes.dart';
 import 'package:guardian_connect_app/core/data/local_storage.dart';
+import 'package:guardian_connect_app/utils/camera_service.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -21,7 +22,9 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) => RootBloc()..add(const InitializeAppEvent()),
+      create: (_) =>
+          RootBloc(cameraService: CameraService())
+            ..add(const InitializeAppEvent()),
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
         navigatorKey: navigatorKey,

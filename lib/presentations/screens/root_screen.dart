@@ -68,7 +68,10 @@ class _RootScreenState extends State<RootScreen> {
                     onTap: (index) =>
                         context.read<RootBloc>().add(ChangeTabEvent(index)),
                   ),
-                  _screens[state.selectedTabIndex],
+                  IndexedStack(
+                    index: state.selectedTabIndex,
+                    children: _screens,
+                  ),
                 ],
               ),
             ),

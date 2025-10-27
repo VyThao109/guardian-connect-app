@@ -18,6 +18,14 @@ class ChangeTabEvent extends RootEvent {
 }
 
 // Camera
+class ConnectCameraEvent extends RootEvent {
+  const ConnectCameraEvent();
+}
+
+class DisconnectCameraEvent extends RootEvent {
+  const DisconnectCameraEvent();
+}
+
 class UpdateCameraStatusEvent extends RootEvent {
   final ConnectionStatus status;
 
@@ -27,12 +35,13 @@ class UpdateCameraStatusEvent extends RootEvent {
   List<Object?> get props => [status];
 }
 
-class ConnectCameraEvent extends RootEvent {
-  const ConnectCameraEvent();
-}
+class CameraStatusChangedEvent extends RootEvent {
+  final CameraConnectionStatus status;
 
-class DisconnectCameraEvent extends RootEvent {
-  const DisconnectCameraEvent();
+  const CameraStatusChangedEvent(this.status);
+
+  @override
+  List<Object?> get props => [status];
 }
 
 // GPS

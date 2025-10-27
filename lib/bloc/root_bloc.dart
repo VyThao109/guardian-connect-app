@@ -1,21 +1,32 @@
+import 'dart:async';
+
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:guardian_connect_app/core/data/local_storage.dart';
+import 'package:guardian_connect_app/utils/camera_service.dart';
 import 'package:latlong2/latlong.dart';
 
 part 'root_event.dart';
 part 'root_state.dart';
 
 class RootBloc extends Bloc<RootEvent, RootState> {
-  RootBloc() : super(RootState.initial()) {
+  final CameraService cameraService;
+  StreamSubscription? _cameraStatusSubscription;
+
+  RootBloc({required this.cameraService}) : super(RootState.initial()) {
     // Tab Navigation
     on<ChangeTabEvent>(_onChangeTab);
 
     // Camera Events
-    on<UpdateCameraStatusEvent>(_onUpdateCameraStatus);
     on<ConnectCameraEvent>(_onConnectCamera);
     on<DisconnectCameraEvent>(_onDisconnectCamera);
+    on<UpdateCameraStatusEvent>(_onUpdateCameraStatus);
+    on<CameraStatusChangedEvent>(_onCameraStatusChanged);
+
+    _cameraStatusSubscription = cameraService.statusStream.listen((status) {
+      add(CameraStatusChangedEvent(status));
+    });
 
     // GPS Events
     on<UpdateGpsStatusEvent>(_onUpdateGpsStatus);
@@ -42,7 +53,34 @@ class RootBloc extends Bloc<RootEvent, RootState> {
     emit(state.copyWith(selectedTabIndex: event.tabIndex));
   }
 
-  // ========== CAMERA ==========
+  // ========== CAMERA =========
+  Future<void> _onConnectCamera(
+    ConnectCameraEvent event,
+    Emitter<RootState> emit,
+  ) async {
+    emit(state.copyWith(cameraStatus: ConnectionStatus.connecting));
+
+    try {
+      final success = await cameraService.connect();
+
+      if (!success) {
+        emit(state.copyWith(cameraStatus: ConnectionStatus.disconnected));
+      }
+      // Status sẽ được update qua stream listener
+    } catch (e) {
+      print('Connect camera error: $e');
+      emit(state.copyWith(cameraStatus: ConnectionStatus.disconnected));
+    }
+  }
+
+  void _onDisconnectCamera(
+    DisconnectCameraEvent event,
+    Emitter<RootState> emit,
+  ) async {
+    await cameraService.disconnect();
+    emit(state.copyWith(cameraStatus: ConnectionStatus.disconnected));
+  }
+
   void _onUpdateCameraStatus(
     UpdateCameraStatusEvent event,
     Emitter<RootState> emit,
@@ -50,27 +88,28 @@ class RootBloc extends Bloc<RootEvent, RootState> {
     emit(state.copyWith(cameraStatus: event.status));
   }
 
-  Future<void> _onConnectCamera(
-    ConnectCameraEvent event,
-    Emitter<RootState> emit,
-  ) async {
-    emit(state.copyWith(cameraStatus: ConnectionStatus.connecting));
-
-    // Giả lập kết nối camera
-    await Future.delayed(const Duration(seconds: 2));
-
-    // TODO: Thực tế sẽ kết nối đến camera stream
-    // final success = await cameraService.connect();
-
-    emit(state.copyWith(cameraStatus: ConnectionStatus.connected));
-  }
-
-  void _onDisconnectCamera(
-    DisconnectCameraEvent event,
+  void _onCameraStatusChanged(
+    CameraStatusChangedEvent event,
     Emitter<RootState> emit,
   ) {
-    // TODO: Disconnect camera service
-    emit(state.copyWith(cameraStatus: ConnectionStatus.disconnected));
+    ConnectionStatus status;
+
+    switch (event.status) {
+      case CameraConnectionStatus.connected:
+        status = ConnectionStatus.connected;
+        break;
+      case CameraConnectionStatus.connecting:
+        status = ConnectionStatus.connecting;
+        break;
+      case CameraConnectionStatus.disconnected:
+      case CameraConnectionStatus.failed:
+        status = ConnectionStatus.disconnected;
+        break;
+      default:
+        return; // Không emit nếu là initialized
+    }
+
+    emit(state.copyWith(cameraStatus: status));
   }
 
   // ========== GPS ==========
@@ -188,7 +227,7 @@ class RootBloc extends Bloc<RootEvent, RootState> {
   }
 
   void _onClearEmergency(ClearEmergencyEvent event, Emitter<RootState> emit) {
-    // TODO: Clear emergency state
+    emit(state.copyWith(isSOS: false));
   }
 
   // ========== INITIALIZE ==========
@@ -209,5 +248,12 @@ class RootBloc extends Bloc<RootEvent, RootState> {
 
     // Auto connect services
     add(const ConnectGpsEvent());
+  }
+
+  @override
+  Future<void> close() {
+    _cameraStatusSubscription?.cancel();
+    cameraService.dispose();
+    return super.close();
   }
 }
