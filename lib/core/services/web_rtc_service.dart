@@ -70,7 +70,7 @@ class WebRTCService {
 
   /// Cập nhật IP động từ setting
   void updateBaseUrl(String ipAddress) {
-    _baseUrl = 'http://$ipAddress:8000/offer';
+    _baseUrl = '$ipAddress/offer';
     debugPrint('WebRTC URL updated: $_baseUrl');
   }
 

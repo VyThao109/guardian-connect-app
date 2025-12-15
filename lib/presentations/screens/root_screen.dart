@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_svg/svg.dart';
 import 'package:flutter_vector_icons/flutter_vector_icons.dart';
 import 'package:guardian_connect_app/bloc/root_bloc.dart';
 import 'package:guardian_connect_app/common/extensions/custom_theme_extension.dart';
@@ -58,6 +59,18 @@ class _RootScreenState extends State<RootScreen> {
               ),
             ),
             centerTitle: true,
+            leading: Padding(
+              padding: const EdgeInsets.only(left: 24),
+              child: SizedBox(
+                width: 40,
+                height: 40,
+                child: SvgPicture.asset(
+                  "assets/icons/logo_white.svg",
+                  fit: BoxFit.contain,
+                  colorFilter: ColorFilter.mode(Colors.white, BlendMode.srcIn),
+                ),
+              ),
+            ),
             actions: [
               Padding(
                 padding: const EdgeInsetsGeometry.only(right: 24),

@@ -49,72 +49,107 @@ class SettingScreen extends StatelessWidget {
               const SizedBox(height: 24),
 
               _buildSectionHeader(context, "KẾT NỐI THIẾT BỊ"),
-              _buildSettingTile(
-                context,
-                icon: Feather.wifi,
-                title: "Địa chỉ kết nối (IP/Domain)", // Đổi title cho rõ nghĩa
-                subtitle: state.deviceIp,
-                iconColor: context.theme.primaryColor ?? Colors.blue,
-                onTap: () => _showEditBottomSheet(
-                  context,
-                  title: "Cập nhật địa chỉ",
-                  currentValue: state.deviceIp,
-                  // 1. Đổi kiểu bàn phím sang URL để nhập được cả số và chữ
-                  inputType: TextInputType.url,
-                  // 2. Cập nhật gợi ý đa dạng hơn
-                  hint: "VD: 192.168.1.10 hoặc my-app.ngrok.io",
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return "Địa chỉ không được để trống";
-                    }
-
-                    // 3. Logic validate mới: Chấp nhận cả IP và Domain
-                    // Regex check IP V4
-                    final ipRegex = RegExp(r'^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$');
-
-                    // Regex check Domain/URL (Chấp nhận localhost, domain có dấu chấm, có port...)
-                    // Cho phép: example.com, 192.168.1.1, sub.domain.net:8080
-                    final domainRegex = RegExp(
-                      r'^([a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}(:\d+)?$',
-                    );
-
-                    // Cho phép cả localhost (trường hợp test máy ảo)
-                    final isLocalhost = value == 'localhost';
-
-                    // Nếu không phải IP, không phải Domain, không phải localhost -> Lỗi
-                    if (!ipRegex.hasMatch(value) &&
-                        !domainRegex.hasMatch(value) &&
-                        !isLocalhost) {
-                      return "Địa chỉ IP hoặc tên miền không hợp lệ";
-                    }
-
-                    return null;
-                  },
-                  onSave: (val) {
-                    // Xử lý chuẩn hóa chuỗi (nếu người dùng lỡ copy cả http://)
-                    String cleanUrl = val.trim();
-                    if (cleanUrl.startsWith("http://")) {
-                      cleanUrl = cleanUrl.substring(7);
-                    } else if (cleanUrl.startsWith("https://")) {
-                      cleanUrl = cleanUrl.substring(8);
-                    }
-                    // Loại bỏ dấu / ở cuối nếu có
-                    if (cleanUrl.endsWith("/")) {
-                      cleanUrl = cleanUrl.substring(0, cleanUrl.length - 1);
-                    }
-
-                    context.read<RootBloc>().add(UpdateDeviceIpEvent(cleanUrl));
-
-                    CustomSnackbar.showSnackBar(
+              _buildSettingsGroup(
+                children: [
+                  _buildSettingTile(
+                    context,
+                    icon: Feather.wifi,
+                    title:
+                        "Địa chỉ kết nối (IP/Domain)", // Đổi title cho rõ nghĩa
+                    subtitle: state.deviceIp,
+                    iconColor: context.theme.primaryColor ?? Colors.blue,
+                    onTap: () => _showEditBottomSheet(
                       context,
-                      "Thành công",
-                      "Đã cập nhật địa chỉ kết nối",
-                      AlertType.success,
-                    );
-                  },
-                ),
-              ),
+                      title: "Cập nhật địa chỉ",
+                      currentValue: state.deviceIp,
+                      // 1. Đổi kiểu bàn phím sang URL để nhập được cả số và chữ
+                      inputType: TextInputType.url,
+                      // 2. Cập nhật gợi ý đa dạng hơn
+                      hint: "VD: 192.168.1.10 hoặc my-app.ngrok.io",
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return "Địa chỉ không được để trống";
+                        }
 
+                        // Regex check IP V4 (Giữ nguyên)
+                        final ipRegex = RegExp(
+                          r'^(?:[0-9]{1,3}\.){3}[0-9]{1,3}(?::\d+)?$',
+                        );
+
+                        // Regex check Domain/URL (BỎ COMMENT VÀ CẬP NHẬT)
+                        // Regex này chấp nhận:
+                        // - Domain thường: google.com
+                        // - Subdomain nhiều cấp: ai.myidvndut.id.vn
+                        // - Domain kèm port: myserver.net:8080
+                        // - Chấp nhận cả http:// hoặc https:// ở đầu (để user đỡ bị rối)
+                        final domainRegex = RegExp(
+                          r'^(http:\/\/|https:\/\/)?([a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}(:\d+)?(\/.*)?$',
+                        );
+
+                        // Check localhost
+                        final isLocalhost = value.contains(
+                          'localhost',
+                        ); // Dùng contains để chấp nhận localhost:8000
+
+                        // Kiểm tra tổng hợp
+                        // Nếu KHÔNG phải IP VÀ KHÔNG phải Domain VÀ KHÔNG phải Localhost -> Lỗi
+                        if (!ipRegex.hasMatch(value) &&
+                            !domainRegex.hasMatch(value) &&
+                            !isLocalhost) {
+                          return "Địa chỉ IP hoặc tên miền không hợp lệ";
+                        }
+
+                        return null;
+                      },
+                      onSave: (val) {
+                        // Cắt khoảng trắng thừa
+                        String formattedUrl = val.trim();
+
+                        // Xử lý dấu / ở cuối (nếu có)
+                        if (formattedUrl.endsWith("/")) {
+                          formattedUrl = formattedUrl.substring(
+                            0,
+                            formattedUrl.length - 1,
+                          );
+                        }
+
+                        // Kiểm tra xem đã có protocol (http/https) chưa
+                        bool hasProtocol =
+                            formattedUrl.startsWith("http://") ||
+                            formattedUrl.startsWith("https://");
+
+                        if (!hasProtocol) {
+                          // Regex kiểm tra xem chuỗi có phải là IP không (hỗ trợ cả port, vd: 192.168.1.10:8000)
+                          // Giải thích: 3 nhóm số đầu + dấu chấm, nhóm số cuối, optional port (:xxxx)
+                          final ipRegex = RegExp(
+                            r'^(?:[0-9]{1,3}\.){3}[0-9]{1,3}(?::\d+)?$',
+                          );
+
+                          if (ipRegex.hasMatch(formattedUrl)) {
+                            // Nếu đúng format IP -> Thêm HTTP
+                            formattedUrl = "http://$formattedUrl";
+                          } else {
+                            // Các trường hợp còn lại (ngrok, cloudflare, tên miền...) -> Thêm HTTPS
+                            formattedUrl = "https://$formattedUrl";
+                          }
+                        }
+
+                        // Lưu url chuẩn, vd: http://192.168.1.10:8000 hoặc https://my-app.ngrok.io)
+                        context.read<RootBloc>().add(
+                          UpdateDeviceIpEvent(formattedUrl),
+                        );
+
+                        CustomSnackbar.showSnackBar(
+                          context,
+                          "Thành công",
+                          "Đã cập nhật: $formattedUrl",
+                          AlertType.success,
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
               const SizedBox(height: 24),
 
               // GROUP 2: LIÊN HỆ & SOS

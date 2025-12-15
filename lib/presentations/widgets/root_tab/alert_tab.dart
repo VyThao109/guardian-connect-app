@@ -5,6 +5,7 @@ import 'package:guardian_connect_app/bloc/root_bloc.dart';
 import 'package:guardian_connect_app/common/extensions/custom_theme_extension.dart';
 import 'package:guardian_connect_app/common/extensions/font_sizes.dart';
 import 'package:guardian_connect_app/core/services/sos_notification_service.dart';
+import 'package:guardian_connect_app/presentations/widgets/button/common_button.dart';
 import 'package:guardian_connect_app/presentations/widgets/container/quick_actions.dart';
 
 class AlertTab extends StatefulWidget {
@@ -73,10 +74,13 @@ class _AlertTabState extends State<AlertTab> with TickerProviderStateMixin {
       buildWhen: (previous, current) {
         return previous.isSOS != current.isSOS ||
             previous.isSosNotificationEnabled !=
-                current.isSosNotificationEnabled;
+                current.isSosNotificationEnabled ||
+            previous.isConnected != current.isConnected;
       },
       builder: (context, state) {
-        final bool isEnable = state.isSosNotificationEnabled;
+        final bool isEnable =
+            state.isSosNotificationEnabled && state.isConnected;
+        final bool isSOSEnable = state.isSosNotificationEnabled;
         return SingleChildScrollView(
           child: Column(
             spacing: 24,
@@ -123,8 +127,8 @@ class _AlertTabState extends State<AlertTab> with TickerProviderStateMixin {
                         ),
                         Container(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 4,
-                            vertical: 2,
+                            horizontal: 8,
+                            vertical: 4,
                           ),
                           decoration: BoxDecoration(
                             color: Colors.black,
@@ -135,21 +139,27 @@ class _AlertTabState extends State<AlertTab> with TickerProviderStateMixin {
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Container(
-                                width: 6,
-                                height: 6,
+                                width: 8,
+                                height: 8,
                                 decoration: BoxDecoration(
                                   color: isEnable
                                       ? context.theme.green
+                                      : isSOSEnable
+                                      ? Colors.orange
                                       : context.theme.grayBgColor,
                                   shape: BoxShape.circle,
                                 ),
                               ),
                               Text(
-                                isEnable ? "Bật" : "Tắt",
+                                isEnable
+                                    ? "Sẵn sàng"
+                                    : isSOSEnable
+                                    ? "Bật"
+                                    : "Tắt",
                                 style: TextStyle(
                                   color: Colors.white,
                                   fontSize: FontSizes.small,
-                                  fontWeight: FontWeight.normal,
+                                  fontWeight: FontWeight.w500,
                                 ),
                               ),
                             ],
@@ -164,22 +174,14 @@ class _AlertTabState extends State<AlertTab> with TickerProviderStateMixin {
                         if (state.isSOS)
                           SizedBox(
                             width: double.infinity,
-                            child: ElevatedButton.icon(
+                            child: CommonButton(
+                              label: "Tắt cảnh báo",
+                              icon: Feather.refresh_cw,
                               onPressed: () {
                                 context.read<RootBloc>().add(
                                   ClearEmergencyEvent(),
                                 );
                               },
-                              icon: Icon(MaterialCommunityIcons.refresh),
-                              label: Text("Reset alert"),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.black,
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.all(4),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                              ),
                             ),
                           ),
                       ],

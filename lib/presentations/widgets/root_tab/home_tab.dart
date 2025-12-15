@@ -94,36 +94,30 @@ class _HomeTabState extends State<HomeTab> {
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: isConnected
-                          ? Colors.green.shade50
-                          : Colors.grey.shade100,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: isConnected
-                            ? Colors.green.shade200
-                            : Colors.grey.shade300,
-                      ),
+                      color: Colors.black,
+                      borderRadius: BorderRadius.circular(4),
                     ),
                     child: Row(
+                      spacing: 4,
+                      mainAxisAlignment: MainAxisAlignment.center,
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Container(
                           width: 8,
                           height: 8,
                           decoration: BoxDecoration(
-                            color: isConnected ? Colors.green : Colors.grey,
+                            color: isConnected
+                                ? context.theme.green
+                                : context.theme.grayBgColor,
                             shape: BoxShape.circle,
                           ),
                         ),
-                        const SizedBox(width: 6),
                         Text(
                           isConnected ? "Trực tiếp" : "Đã dừng",
                           style: TextStyle(
-                            color: isConnected
-                                ? Colors.green.shade700
-                                : Colors.grey.shade600,
+                            color: Colors.white,
                             fontSize: FontSizes.small,
-                            fontWeight: FontWeight.w600,
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
                       ],

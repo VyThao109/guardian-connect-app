@@ -106,8 +106,8 @@ class SOSNotificationService {
       playSound: true,
       enableVibration: true,
       styleInformation: BigTextStyleInformation(
-        'Your loved one has triggered an emergency SOS alert. Please check immediately!',
-        contentTitle: 'EMERGENCY SOS ALERT',
+        'Người thân của bạn vừa gửi tín hiệu cầu cứu SOS. Vui lòng kiểm tra ngay lập tức!',
+        contentTitle: 'CẢNH BÁO KHẨN CẤP SOS',
         summaryText: 'Guardian Connect',
       ),
     );
@@ -127,8 +127,8 @@ class SOSNotificationService {
 
     await _notifications.show(
       0,
-      'EMERGENCY SOS ALERT',
-      'Your loved one has triggered an emergency alert!',
+      'CẢNH BÁO KHẨN CẤP SOS',
+      'Người thân đang cần sự trợ giúp khẩn cấp!',
       details,
     );
 
