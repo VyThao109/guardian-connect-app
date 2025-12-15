@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_map/flutter_map.dart';
-import 'package:flutter_vector_icons/flutter_vector_icons.dart';
 import 'package:guardian_connect_app/bloc/root_bloc.dart';
 import 'package:guardian_connect_app/common/extensions/custom_theme_extension.dart';
 import 'package:guardian_connect_app/common/extensions/font_sizes.dart';
-import 'package:guardian_connect_app/utils/functions.dart';
-import 'package:guardian_connect_app/presentations/widgets/button/dual_action_buttons.dart';
+import 'package:guardian_connect_app/presentations/widgets/container/quick_actions.dart';
 import 'package:guardian_connect_app/presentations/widgets/stream_player/stream_player.dart';
+import 'package:guardian_connect_app/utils/functions.dart';
+import 'package:guardian_connect_app/core/services/web_rtc_service.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 class HomeTab extends StatefulWidget {
   const HomeTab({super.key});
@@ -20,31 +19,152 @@ class HomeTab extends StatefulWidget {
 
 class _HomeTabState extends State<HomeTab> {
   final MapController _mapController = MapController();
-  bool mapReady = false;
-
-  @override
-  void initState() {
-    super.initState();
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      setState(() {
-        mapReady = true;
-      });
-    });
-  }
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<RootBloc, RootState>(
-      builder: (context, state) {
-        return SingleChildScrollView(
+    return SingleChildScrollView(
+      child: Column(
+        spacing: 24,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildStreamVideoSection(context),
+
+          _buildLocationViewSection(context),
+
+          const QuickActionsContainer(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStreamVideoSection(BuildContext context) {
+    return BlocSelector<RootBloc, RootState, ConnectionStatus>(
+      selector: (state) => state.connectionStatus,
+      builder: (context, status) {
+        final isConnected = status == ConnectionStatus.connected;
+
+        return Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            border: Border.all(color: Colors.grey.shade200),
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withAlpha(10),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
           child: Column(
-            spacing: 24,
-            crossAxisAlignment: CrossAxisAlignment.start,
+            spacing: 20,
             children: [
-              buildStreamVideoSection(context, state),
-              buildLocationViewSection(context, state),
-              buildActionBtnsSection(context, state),
+              // Header
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    spacing: 4,
+                    children: [
+                      Text(
+                        'Camera trực tiếp',
+                        style: TextStyle(
+                          fontSize: FontSizes.large,
+                          fontWeight: FontWeight.w700,
+                          color: context.theme.black,
+                        ),
+                      ),
+                      Text(
+                        'Góc nhìn từ thiết bị người thân',
+                        style: TextStyle(
+                          fontSize: FontSizes.small,
+                          color: context.theme.grayTextColor,
+                        ),
+                      ),
+                    ],
+                  ),
+                  // Status Badge
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: isConnected
+                          ? Colors.green.shade50
+                          : Colors.grey.shade100,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: isConnected
+                            ? Colors.green.shade200
+                            : Colors.grey.shade300,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 8,
+                          height: 8,
+                          decoration: BoxDecoration(
+                            color: isConnected ? Colors.green : Colors.grey,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          isConnected ? "Trực tiếp" : "Đã dừng",
+                          style: TextStyle(
+                            color: isConnected
+                                ? Colors.green.shade700
+                                : Colors.grey.shade600,
+                            fontSize: FontSizes.small,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+
+              // Player
+              const StreamPlayer(),
+
+              // Note box
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.blue.shade100),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      Icons.info_outline,
+                      size: 20,
+                      color: context.theme.blue,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        "Bạn đang xem hình ảnh trực tiếp từ thiết bị của người thân.",
+                        style: TextStyle(
+                          color: context.theme.blue,
+                          fontSize: FontSizes.small,
+                          height: 1.4,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ],
           ),
         );
@@ -52,304 +172,144 @@ class _HomeTabState extends State<HomeTab> {
     );
   }
 
-  Widget buildStreamVideoSection(BuildContext context, RootState state) {
-    final isStreaming = state.cameraStatus == ConnectionStatus.connected;
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        border: Border.all(color: context.theme.grayBgColor ?? Colors.grey),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        spacing: 20,
-        children: [
-          //header
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Column(
-                mainAxisAlignment: MainAxisAlignment.start,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                spacing: 2,
+  Widget _buildLocationViewSection(BuildContext context) {
+    return BlocBuilder<RootBloc, RootState>(
+      buildWhen: (previous, current) =>
+          previous.currentLocation != current.currentLocation ||
+          previous.address != current.address ||
+          previous.lastUpdate != current.lastUpdate,
+      builder: (context, state) {
+        final companionLocation = state.currentLocation;
+        final address = state.address ?? 'Đang cập nhật vị trí...';
+        final lastUpdate = state.lastUpdateText;
+
+        final LatLng displayLocation =
+            companionLocation ??
+            const LatLng(16.047079, 108.206230); // Default Da Nang
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          spacing: 16,
+          children: [
+            Text(
+              "Vị trí hiện tại",
+              style: TextStyle(
+                color: context.theme.black,
+                fontSize: FontSizes.large,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            SizedBox(
+              height: 220,
+              child: Stack(
                 children: [
-                  Text(
-                    'Live Camera Feed',
-                    style: TextStyle(
-                      fontSize: FontSizes.large,
-                      fontWeight: FontWeight.w700,
-                      color: context.theme.black,
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: FlutterMap(
+                      mapController: _mapController,
+                      options: MapOptions(
+                        initialCenter: displayLocation,
+                        initialZoom: 15,
+                        interactionOptions: const InteractionOptions(
+                          flags: InteractiveFlag.all,
+                        ),
+                      ),
+                      children: [
+                        TileLayer(
+                          urlTemplate:
+                              'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                          userAgentPackageName: 'com.example.guardian_connect',
+                        ),
+                        MarkerLayer(
+                          markers: [
+                            if (companionLocation != null)
+                              Marker(
+                                point: companionLocation,
+                                width: 80,
+                                height: 80,
+                                child: Icon(
+                                  Icons.location_on,
+                                  color: context.theme.red,
+                                  size: 40,
+                                ),
+                              ),
+                          ],
+                        ),
+                      ],
                     ),
                   ),
-                  Text(
-                    'View from companion\'s device',
-                    style: TextStyle(
-                      fontSize: FontSizes.small,
-                      fontWeight: FontWeight.normal,
-                      color: context.theme.grayTextColor,
+
+                  // Info Card Overlay
+                  Positioned(
+                    bottom: 12,
+                    left: 12,
+                    right: 60,
+                    child: GestureDetector(
+                      onTap: () => FunctionsHelper.recenterMap(
+                        _mapController, // Recenter map
+                        context,
+                      ),
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withAlpha(225),
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withAlpha(25),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              companionLocation != null
+                                  ? address
+                                  : "Đang cập nhật...",
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: FontSizes.medium,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Cập nhật: $lastUpdate',
+                              style: TextStyle(
+                                color: Colors.grey.shade600,
+                                fontSize: FontSizes.small - 1,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // Navigation Button
+                  Positioned(
+                    bottom: 12,
+                    right: 12,
+                    child: FloatingActionButton.small(
+                      heroTag: "nav_btn_home",
+                      backgroundColor: Colors.white,
+                      foregroundColor: Colors.blue,
+                      child: const Icon(Icons.navigation_outlined),
+                      onPressed: () =>
+                          context.read<RootBloc>().add(const ChangeTabEvent(1)),
                     ),
                   ),
                 ],
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                decoration: BoxDecoration(
-                  color: Colors.black,
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Row(
-                  spacing: 4,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Container(
-                      width: 6,
-                      height: 6,
-                      decoration: BoxDecoration(
-                        color: isStreaming
-                            ? context.theme.red
-                            : context.theme.grayBgColor,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    Text(
-                      isStreaming ? "Live" : "Stopped",
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: FontSizes.small,
-                        fontWeight: FontWeight.normal,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-
-          //video player
-          Column(
-            spacing: 12,
-            children: [
-              StreamPlayer(),
-
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: context.theme.blue300,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: context.theme.blue500 ?? Colors.blue,
-                  ),
-                ),
-                child: RichText(
-                  text: TextSpan(
-                    children: [
-                      TextSpan(
-                        text: 'Note: ',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: context.theme.blue,
-                          fontSize: FontSizes.medium,
-                          height: 1.5,
-                        ),
-                      ),
-                      TextSpan(
-                        text:
-                            "You are now watching the live view from your visually impaired companion's device.",
-                        style: TextStyle(
-                          color: context.theme.blue,
-                          fontSize: FontSizes.medium,
-                          height: 1.5,
-                        ),
-                      ),
-                    ],
-                  ),
-                  textAlign: TextAlign.justify,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget buildLocationViewSection(BuildContext context, RootState state) {
-    final currentLocation = state.currentLocation ?? LatLng(16.0544, 108.2022);
-    final address = state.address ?? 'Loading...';
-    final lastUpdate = state.lastUpdateText;
-    return Column(
-      mainAxisSize: MainAxisSize.max,
-      mainAxisAlignment: MainAxisAlignment.start,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      spacing: 16,
-      children: [
-        Text(
-          "Companion's current Location",
-          style: TextStyle(
-            color: context.theme.black,
-            fontSize: FontSizes.large,
-            fontWeight: FontWeight.w700,
-          ),
-          textAlign: TextAlign.left,
-        ),
-        SizedBox(
-          height: 200,
-          child: Stack(
-            children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: FlutterMap(
-                  mapController: _mapController,
-                  options: MapOptions(
-                    initialCenter: currentLocation,
-                    initialZoom: 15,
-                    interactionOptions: const InteractionOptions(
-                      flags: InteractiveFlag.all,
-                    ),
-                    onMapReady: () {
-                      setState(() {
-                        mapReady = true;
-                      });
-                    },
-                  ),
-                  children: [
-                    TileLayer(
-                      urlTemplate:
-                          'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                      userAgentPackageName: 'com.example.guardian_connect',
-                    ),
-                    MarkerLayer(
-                      markers: [
-                        Marker(
-                          point: currentLocation,
-                          width: 80,
-                          height: 80,
-                          child: Icon(
-                            Icons.location_on,
-                            color: context.theme.red,
-                            size: 40,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              Positioned(
-                bottom: 10,
-                left: 10,
-                child: GestureDetector(
-                  onTap: () =>
-                      FunctionsHelper.recenterMap(_mapController, context),
-                  child: Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(8),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withAlpha(62),
-                          blurRadius: 4,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      spacing: 2,
-                      children: [
-                        Text(
-                          'Current location',
-                          style: TextStyle(
-                            color: Colors.black,
-                            fontWeight: FontWeight.w700,
-                            fontSize: FontSizes.medium,
-                          ),
-                        ),
-                        Text(
-                          '$address\nUpdated $lastUpdate',
-                          style: TextStyle(
-                            color: context.theme.black,
-                            fontSize: FontSizes.small,
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              Positioned(
-                bottom: 10,
-                right: 10,
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(8),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withAlpha(62),
-                        blurRadius: 4,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: IconButton(
-                    onPressed: () =>
-                        context.read<RootBloc>().add(ChangeTabEvent(1)),
-                    icon: Icon(Feather.navigation, size: 24),
-                    style: IconButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      foregroundColor: Colors.black,
-                      padding: const EdgeInsets.all(4),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget buildActionBtnsSection(BuildContext context, RootState state) {
-    return Column(
-      mainAxisSize: MainAxisSize.max,
-      mainAxisAlignment: MainAxisAlignment.start,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      spacing: 16,
-      children: [
-        Text(
-          "Quick Actions",
-          style: TextStyle(
-            color: context.theme.black,
-            fontSize: FontSizes.large,
-            fontWeight: FontWeight.w700,
-          ),
-          textAlign: TextAlign.left,
-        ),
-        DualActionButtons(
-          label1: "Reach companion",
-          label2: "Emergency call",
-          icon1: Ionicons.call_outline,
-          icon2: AntDesign.warning,
-          onPressed1: () {
-            FunctionsHelper.showContactModal(context);
-          },
-          onPressed2: () async {
-            await launchUrl(
-              Uri(scheme: 'tel', path: "115"),
-              mode: LaunchMode.externalApplication,
-            );
-          },
-        ),
-      ],
+            ),
+          ],
+        );
+      },
     );
   }
 }

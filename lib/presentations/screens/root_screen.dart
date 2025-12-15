@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_vector_icons/flutter_vector_icons.dart';
 import 'package:guardian_connect_app/bloc/root_bloc.dart';
 import 'package:guardian_connect_app/common/extensions/custom_theme_extension.dart';
 import 'package:guardian_connect_app/common/extensions/font_sizes.dart';
+import 'package:guardian_connect_app/common/routes/routes.dart';
 import 'package:guardian_connect_app/presentations/widgets/navigator/custom_navigator.dart';
 import 'package:guardian_connect_app/presentations/widgets/root_tab/alert_tab.dart';
 import 'package:guardian_connect_app/presentations/widgets/root_tab/home_tab.dart';
@@ -45,7 +47,7 @@ class _RootScreenState extends State<RootScreen> {
                     ),
                   ),
                   Text(
-                    'Stay connected with your loved one',
+                    'Luôn bên cạnh người thân yêu',
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: FontSizes.small,
@@ -56,25 +58,36 @@ class _RootScreenState extends State<RootScreen> {
               ),
             ),
             centerTitle: true,
-          ),
-          body: Padding(
-            padding: const EdgeInsets.all(24),
-            child: SingleChildScrollView(
-              child: Column(
-                spacing: 24,
-                children: [
-                  CustomNavigator(
-                    selectedIndex: state.selectedTabIndex,
-                    onTap: (index) =>
-                        context.read<RootBloc>().add(ChangeTabEvent(index)),
-                  ),
-                  IndexedStack(
-                    index: state.selectedTabIndex,
-                    children: _screens,
-                  ),
-                ],
+            actions: [
+              Padding(
+                padding: const EdgeInsetsGeometry.only(right: 24),
+                child: InkWell(
+                  onTap: () => {
+                    Navigator.of(context).pushNamed(Routes.setting),
+                  },
+                  child: Icon(Feather.settings, color: Colors.white70),
+                ),
               ),
+            ],
+          ),
+          extendBody: true,
+          body: Padding(
+            padding: const EdgeInsetsGeometry.only(
+              bottom: 72,
+              top: 24,
+              left: 24,
+              right: 24,
             ),
+            child: IndexedStack(
+              index: state.selectedTabIndex,
+              children: _screens,
+            ),
+          ),
+
+          bottomNavigationBar: CustomNavigator(
+            selectedIndex: state.selectedTabIndex,
+            onTap: (index) =>
+                context.read<RootBloc>().add(ChangeTabEvent(index)),
           ),
         );
       },

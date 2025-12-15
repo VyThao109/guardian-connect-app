@@ -3,7 +3,7 @@
 #
 
 list(APPEND FLUTTER_PLUGIN_LIST
-  flutter_secure_storage_linux
+  audioplayers_linux
   flutter_webrtc
   url_launcher_linux
 )

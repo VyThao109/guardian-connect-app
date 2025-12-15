@@ -15,111 +15,114 @@ class CustomNavigator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    const double indicatorWidth = 40.0;
+
     return Container(
-      height: 40,
+      height: 60 + MediaQuery.of(context).padding.bottom,
       decoration: BoxDecoration(
-        color: context.theme.grayBgColor,
-        borderRadius: BorderRadius.circular(999),
+        color: Colors.white,
+        border: Border(top: BorderSide(color: Colors.grey.shade200, width: 1)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(25),
+            blurRadius: 10,
+            offset: const Offset(0, -5),
+          ),
+        ],
       ),
-      padding: const EdgeInsets.all(4),
       child: Stack(
         children: [
-          // 🟦 Animated white background moves under selected item
+          // SLIDING INDICATOR
           AnimatedAlign(
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeInOut,
-            alignment: _getAlignment(selectedIndex),
-            child: Container(
-              width:
-                  MediaQuery.of(context).size.width / 3 * 0.85, // chia 3 item
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(999),
+            duration: const Duration(milliseconds: 400),
+            curve: Curves.easeOutQuad,
+            alignment: Alignment((selectedIndex - 1).toDouble(), -1.0),
+
+            child: FractionallySizedBox(
+              widthFactor: 1 / 3,
+              heightFactor: 1.0,
+              child: Align(
+                alignment: Alignment.topCenter,
+                child: Container(
+                  width: indicatorWidth,
+                  height: 2,
+                  decoration: BoxDecoration(
+                    color: context.theme.primaryColor ?? Colors.blue,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
               ),
             ),
           ),
-
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              buildNavItem(
-                iconURL:
-                    "assets/icons/material-symbols_home-outline-rounded.svg",
-                label: 'Home',
-                index: 0,
-                context: context,
-              ),
-              buildNavItem(
-                iconURL: "assets/icons/mingcute_location-line.svg",
-                label: 'Location',
-                index: 1,
-                context: context,
-              ),
-              buildNavItem(
-                iconURL: "assets/icons/noti-vector.svg",
-                label: 'Alert',
-                index: 2,
-                context: context,
-              ),
-            ],
+          Padding(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(context).padding.bottom,
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                _buildNavItem(
+                  context: context,
+                  index: 0,
+                  label: "Trang chủ",
+                  iconPath:
+                      "assets/icons/material-symbols_home-outline-rounded.svg",
+                ),
+                _buildNavItem(
+                  context: context,
+                  index: 1,
+                  label: "Định vị",
+                  iconPath: "assets/icons/mingcute_location-line.svg",
+                ),
+                _buildNavItem(
+                  context: context,
+                  index: 2,
+                  label: "Cảnh báo",
+                  iconPath: "assets/icons/noti-vector.svg",
+                ),
+              ],
+            ),
           ),
         ],
       ),
     );
   }
 
-  Alignment _getAlignment(int index) {
-    switch (index) {
-      case 0:
-        return Alignment.centerLeft;
-      case 1:
-        return Alignment.center;
-      case 2:
-        return Alignment.centerRight;
-      default:
-        return Alignment.centerLeft;
-    }
-  }
-
-  Widget buildNavItem({
-    required String iconURL,
-    required String label,
-    required int index,
+  Widget _buildNavItem({
     required BuildContext context,
+    required int index,
+    required String label,
+    required String iconPath,
   }) {
+    final isSelected = index == selectedIndex;
+    final primaryColor = context.theme.primaryColor ?? Colors.blue;
+    final iconColor = isSelected ? primaryColor : Colors.grey.shade600;
+
     return Expanded(
-      child: GestureDetector(
+      child: InkWell(
         onTap: () => onTap(index),
-        behavior: HitTestBehavior.opaque,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-          height: 32,
-          child: Row(
-            mainAxisSize: MainAxisSize.max,
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            spacing: 4,
-            children: [
-              SvgPicture.asset(
-                iconURL,
-                width: 20,
-                height: 20,
-                colorFilter: ColorFilter.mode(
-                  context.theme.black ?? Colors.black,
-                  BlendMode.srcIn,
-                ),
+        splashColor: primaryColor.withAlpha(50),
+        highlightColor: Colors.transparent,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            SvgPicture.asset(
+              iconPath,
+              width: 24,
+              height: 24,
+              colorFilter: ColorFilter.mode(iconColor, BlendMode.srcIn),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: FontSizes.small - 2,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                color: iconColor,
               ),
-              Text(
-                label,
-                style: TextStyle(
-                  color: context.theme.black,
-                  fontSize: FontSizes.medium,
-                  fontWeight: FontWeight.w500,
-                  height: 1,
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

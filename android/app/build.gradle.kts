@@ -37,8 +37,14 @@ android {
             signingConfig = signingConfigs.getByName("debug")
         }
     }
+    compileOptions.isCoreLibraryDesugaringEnabled = true
 }
 
 flutter {
     source = "../.."
+}
+
+dependencies {
+    implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 }

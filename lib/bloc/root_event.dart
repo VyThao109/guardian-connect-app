@@ -7,96 +7,67 @@ abstract class RootEvent extends Equatable {
   List<Object?> get props => [];
 }
 
-// Change tab
 class ChangeTabEvent extends RootEvent {
   final int tabIndex;
-
   const ChangeTabEvent(this.tabIndex);
 
   @override
   List<Object?> get props => [tabIndex];
 }
 
-// Camera
-class ConnectCameraEvent extends RootEvent {
-  const ConnectCameraEvent();
+class UpdateDeviceIpEvent extends RootEvent {
+  final String ipAddress;
+  const UpdateDeviceIpEvent(this.ipAddress);
+  @override
+  List<Object?> get props => [ipAddress];
 }
 
-class DisconnectCameraEvent extends RootEvent {
-  const DisconnectCameraEvent();
+class ConnectDeviceEvent extends RootEvent {
+  const ConnectDeviceEvent();
 }
 
-class UpdateCameraStatusEvent extends RootEvent {
+class DisconnectDeviceEvent extends RootEvent {
+  const DisconnectDeviceEvent();
+}
+
+class ConnectionStatusChangedEvent extends RootEvent {
   final ConnectionStatus status;
-
-  const UpdateCameraStatusEvent(this.status);
-
-  @override
-  List<Object?> get props => [status];
-}
-
-class CameraStatusChangedEvent extends RootEvent {
-  final CameraConnectionStatus status;
-
-  const CameraStatusChangedEvent(this.status);
+  const ConnectionStatusChangedEvent(this.status);
 
   @override
   List<Object?> get props => [status];
 }
 
-// GPS
-class UpdateGpsStatusEvent extends RootEvent {
-  final ConnectionStatus status;
-
-  const UpdateGpsStatusEvent(this.status);
+class GPSDataReceivedEvent extends RootEvent {
+  final GPSData gpsData;
+  const GPSDataReceivedEvent(this.gpsData);
 
   @override
-  List<Object?> get props => [status];
+  List<Object> get props => [gpsData];
 }
 
-class ConnectGpsEvent extends RootEvent {
-  const ConnectGpsEvent();
-}
-
-class DisconnectGpsEvent extends RootEvent {
-  const DisconnectGpsEvent();
-}
-
-class UpdateLocationEvent extends RootEvent {
-  final LatLng location;
-  final String? address;
-
-  const UpdateLocationEvent({required this.location, this.address});
-
-  @override
-  List<Object?> get props => [location, address];
-}
-
-class RefreshLocationEvent extends RootEvent {
-  const RefreshLocationEvent();
-}
-
-// SOS
-class UpdateSOSEvent extends RootEvent {
-  final bool isSOS;
-
-  const UpdateSOSEvent(this.isSOS);
-
-  @override
-  List<Object?> get props => [isSOS];
-}
-
-// Companion
 class UpdateCompanionPhoneEvent extends RootEvent {
   final String phoneNumber;
-
   const UpdateCompanionPhoneEvent(this.phoneNumber);
 
   @override
   List<Object?> get props => [phoneNumber];
 }
 
-// Emergency Events
+class UpdateEmergencyPhoneEvent extends RootEvent {
+  final String phoneNumber;
+  const UpdateEmergencyPhoneEvent(this.phoneNumber);
+  @override
+  List<Object?> get props => [phoneNumber];
+}
+
+class ToggleSosNotificationSettingEvent extends RootEvent {
+  final bool isEnabled;
+  const ToggleSosNotificationSettingEvent(this.isEnabled);
+  @override
+  List<Object?> get props => [isEnabled];
+}
+
 class TriggerEmergencyEvent extends RootEvent {
   const TriggerEmergencyEvent();
 }
@@ -105,7 +76,6 @@ class ClearEmergencyEvent extends RootEvent {
   const ClearEmergencyEvent();
 }
 
-// Init Event
 class InitializeAppEvent extends RootEvent {
   const InitializeAppEvent();
 }

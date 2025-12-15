@@ -28,12 +28,15 @@ dependencies:
   flutter_bloc: ^9.1.1
   geolocator: ^14.0.2
   permission_handler: ^12.0.1
-  shared_preferences: ^2.5.3
-  flutter_secure_storage: ^9.2.4
+  shared_preferences: ^2.5.4
   rx_shared_preferences: ^4.0.0
   dartx: ^1.2.0
   flutter_webrtc: ^1.2.0
   http: ^1.5.0
+  flutter_local_notifications: ^19.5.0
+  audioplayers: ^6.5.1
+  vibration: ^3.1.4
+  flutter_launcher_icons: ^0.14.4
 
 dev_dependencies:
   flutter_test:
@@ -47,3 +50,12 @@ flutter:
   assets:
     - assets/icons/
     - assets/images/
+    - assets/sounds/zapsplat_science_fiction_alarm_small_bright_warning_114821.mp3
+
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/icons/logo.png"
+  min_sdk_android: 21
+  adaptive_icon_background: "assets/icons/logo_bg.png"
+  adaptive_icon_foreground: "assets/icons/logo_fg.png"

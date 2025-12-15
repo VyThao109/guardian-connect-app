@@ -4,9 +4,8 @@ import 'package:flutter_vector_icons/flutter_vector_icons.dart';
 import 'package:guardian_connect_app/bloc/root_bloc.dart';
 import 'package:guardian_connect_app/common/extensions/custom_theme_extension.dart';
 import 'package:guardian_connect_app/common/extensions/font_sizes.dart';
-import 'package:guardian_connect_app/utils/functions.dart';
-import 'package:guardian_connect_app/presentations/widgets/button/dual_action_buttons.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:guardian_connect_app/core/services/sos_notification_service.dart';
+import 'package:guardian_connect_app/presentations/widgets/container/quick_actions.dart';
 
 class AlertTab extends StatefulWidget {
   const AlertTab({super.key});
@@ -16,7 +15,7 @@ class AlertTab extends StatefulWidget {
 }
 
 class _AlertTabState extends State<AlertTab> with TickerProviderStateMixin {
-  bool isEnable = false;
+  late SOSNotificationService _sosService;
 
   late AnimationController _shakeController;
   late AnimationController _pulseController;
@@ -26,6 +25,7 @@ class _AlertTabState extends State<AlertTab> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
+    _sosService = RepositoryProvider.of<SOSNotificationService>(context);
 
     // Animation rung lắc
     _shakeController = AnimationController(
@@ -63,6 +63,7 @@ class _AlertTabState extends State<AlertTab> with TickerProviderStateMixin {
   void dispose() {
     _shakeController.dispose();
     _pulseController.dispose();
+    _sosService.dispose();
     super.dispose();
   }
 
@@ -70,9 +71,12 @@ class _AlertTabState extends State<AlertTab> with TickerProviderStateMixin {
   Widget build(BuildContext context) {
     return BlocBuilder<RootBloc, RootState>(
       buildWhen: (previous, current) {
-        return previous.isSOS != current.isSOS;
+        return previous.isSOS != current.isSOS ||
+            previous.isSosNotificationEnabled !=
+                current.isSosNotificationEnabled;
       },
       builder: (context, state) {
+        final bool isEnable = state.isSosNotificationEnabled;
         return SingleChildScrollView(
           child: Column(
             spacing: 24,
@@ -100,7 +104,7 @@ class _AlertTabState extends State<AlertTab> with TickerProviderStateMixin {
                           spacing: 2,
                           children: [
                             Text(
-                              'Emergency SOS',
+                              'Cảnh báo khẩn cấn SOS',
                               style: TextStyle(
                                 fontSize: FontSizes.large,
                                 fontWeight: FontWeight.w700,
@@ -108,7 +112,7 @@ class _AlertTabState extends State<AlertTab> with TickerProviderStateMixin {
                               ),
                             ),
                             Text(
-                              'Emergency alert system',
+                              'Nhận tín hiệu khẩn cấp từ người thân',
                               style: TextStyle(
                                 fontSize: FontSizes.small,
                                 fontWeight: FontWeight.normal,
@@ -141,7 +145,7 @@ class _AlertTabState extends State<AlertTab> with TickerProviderStateMixin {
                                 ),
                               ),
                               Text(
-                                isEnable ? "Enable" : "Disable",
+                                isEnable ? "Bật" : "Tắt",
                                 style: TextStyle(
                                   color: Colors.white,
                                   fontSize: FontSizes.small,
@@ -183,46 +187,11 @@ class _AlertTabState extends State<AlertTab> with TickerProviderStateMixin {
                   ],
                 ),
               ),
-              buildActionBtnsSection(context),
+              QuickActionsContainer(),
             ],
           ),
         );
       },
-    );
-  }
-
-  Widget buildActionBtnsSection(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.max,
-      mainAxisAlignment: MainAxisAlignment.start,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      spacing: 16,
-      children: [
-        Text(
-          "Quick Actions",
-          style: TextStyle(
-            color: context.theme.black,
-            fontSize: FontSizes.large,
-            fontWeight: FontWeight.w700,
-          ),
-          textAlign: TextAlign.left,
-        ),
-        DualActionButtons(
-          label1: "Reach companion",
-          label2: "Emergency call",
-          icon1: Ionicons.call_outline,
-          icon2: AntDesign.warning,
-          onPressed1: () {
-            FunctionsHelper.showContactModal(context);
-          },
-          onPressed2: () async {
-            await launchUrl(
-              Uri(scheme: 'tel', path: "115"),
-              mode: LaunchMode.externalApplication,
-            );
-          },
-        ),
-      ],
     );
   }
 
@@ -254,9 +223,7 @@ class _AlertTabState extends State<AlertTab> with TickerProviderStateMixin {
         boxShadow: sosState
             ? [
                 BoxShadow(
-                  color: (context.theme.red ?? Colors.redAccent).withOpacity(
-                    0.5,
-                  ),
+                  color: (context.theme.red ?? Colors.redAccent).withAlpha(60),
                   blurRadius: 20,
                   spreadRadius: 2,
                 ),
@@ -282,7 +249,7 @@ class _AlertTabState extends State<AlertTab> with TickerProviderStateMixin {
               spacing: 2,
               children: [
                 Text(
-                  "Alert status",
+                  "Tình trạng khẩn cấp",
                   style: TextStyle(
                     fontSize: FontSizes.small,
                     fontWeight: FontWeight.normal,
@@ -290,7 +257,7 @@ class _AlertTabState extends State<AlertTab> with TickerProviderStateMixin {
                   ),
                 ),
                 Text(
-                  sosState ? "Emergency" : "Normal",
+                  sosState ? "Nguy hiểm" : "Bình thường",
                   style: TextStyle(
                     color: sosState
                         ? context.theme.red ?? Colors.redAccent

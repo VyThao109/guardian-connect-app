@@ -5,6 +5,8 @@ import '../../common/extensions/optional_x.dart';
 
 class _Keys {
   static const companionPhoneNumber = "companion_number";
+  static const ipDeviceAddress = "ip_device_address";
+  static const emergencyNumber = "emergency_number";
 }
 
 class Storage {
@@ -59,4 +61,14 @@ class Storage {
       _get<String>(_Keys.companionPhoneNumber) ?? "";
   static Future<void> setcompanionPhoneNumber(String val) =>
       _set(_Keys.companionPhoneNumber, val, notify: true);
+
+  static String get ipDeviceAddress =>
+      _get<String>(_Keys.ipDeviceAddress) ?? "";
+  static Future<void> setIpDeviceAddress(String val) =>
+      _set(_Keys.ipDeviceAddress, val, notify: true);
+
+  static String get emergencyNumber =>
+      _get<String>(_Keys.emergencyNumber) ?? "115";
+  static Future<void> setEmergencyNumber(String val) =>
+      _set(_Keys.emergencyNumber, val, notify: true);
 }

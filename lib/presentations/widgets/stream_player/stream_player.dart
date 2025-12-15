@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_vector_icons/flutter_vector_icons.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:guardian_connect_app/bloc/root_bloc.dart';
-import 'package:guardian_connect_app/common/extensions/custom_theme_extension.dart';
-import 'package:guardian_connect_app/utils/camera_service.dart';
+import 'package:guardian_connect_app/presentations/widgets/button/common_button.dart';
+import 'package:guardian_connect_app/core/services/web_rtc_service.dart';
 
 class StreamPlayer extends StatefulWidget {
   const StreamPlayer({super.key});
@@ -12,133 +13,124 @@ class StreamPlayer extends StatefulWidget {
   State<StreamPlayer> createState() => _StreamPlayerState();
 }
 
-class _StreamPlayerState extends State<StreamPlayer>
-    with AutomaticKeepAliveClientMixin {
+class _StreamPlayerState extends State<StreamPlayer> {
   final RTCVideoRenderer _remoteRenderer = RTCVideoRenderer();
-  late CameraService _cameraService;
-
-  final String raspberryPiUrl = 'http://192.168.1.54:8000/offer';
-
-  @override
-  bool get wantKeepAlive => true;
+  bool _isRendererInitialized = false;
 
   @override
   void initState() {
     super.initState();
-    _cameraService = context.read<RootBloc>().cameraService;
     _initializeRenderer();
   }
 
   Future<void> _initializeRenderer() async {
-    await _cameraService.initialize(_remoteRenderer);
+    await context.read<RootBloc>().webrtcService.initialize(_remoteRenderer);
+    if (mounted) {
+      setState(() {
+        _isRendererInitialized = true;
+      });
+    }
   }
 
   @override
   void dispose() {
+    _remoteRenderer.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    super.build(context);
+    if (!_isRendererInitialized) {
+      return const SizedBox(
+        height: 220,
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    // Dùng BlocSelector để chỉ rebuild khi connectionStatus thay đổi
+    // GPS thay đổi sẽ không làm rebuild widget này
     return BlocBuilder<RootBloc, RootState>(
       buildWhen: (previous, current) =>
-          previous.cameraStatus != current.cameraStatus,
+          previous.connectionStatus != current.connectionStatus ||
+          previous.selectedTabIndex != current.selectedTabIndex,
       builder: (context, state) {
-        final isConnected = state.isCameraConnected;
-        final isConnecting = state.cameraStatus == ConnectionStatus.connecting;
+        final isConnected =
+            state.connectionStatus == ConnectionStatus.connected;
+        final isConnecting =
+            state.connectionStatus == ConnectionStatus.connecting;
+        final isCameraTab = state.selectedTabIndex == 0;
+        final shouldShowVideo = isConnected && isCameraTab;
 
         return Column(
           spacing: 12,
           children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: Container(
-                height: 200,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF1a1a1a),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                // Video player
-                child: isConnected
-                    ? RTCVideoView(
-                        _remoteRenderer,
-                        objectFit:
-                            RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
-                        mirror: false,
-                      )
-                    : _buildPlaceholder(isConnecting),
+            Container(
+              height: 220,
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: const Color(0xFF1a1a1a),
+                borderRadius: BorderRadius.circular(12),
               ),
+              child: shouldShowVideo
+                  ? RTCVideoView(
+                      _remoteRenderer,
+                      objectFit:
+                          RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
+                      mirror: false,
+                      filterQuality: FilterQuality.none,
+                    )
+                  : _buildPlaceholder(context, isConnecting),
             ),
 
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: isConnecting
-                    ? null
-                    : () {
-                        if (isConnected) {
-                          context.read<RootBloc>().add(DisconnectCameraEvent());
-                        } else {
-                          context.read<RootBloc>().add(ConnectCameraEvent());
-                        }
-                      },
-                icon: Icon(
-                  isConnecting
-                      ? Icons.hourglass_empty
-                      : isConnected
-                      ? Icons.videocam_off
-                      : Icons.videocam,
-                ),
-                label: Text(
-                  isConnecting
-                      ? 'Connecting...'
-                      : isConnected
-                      ? 'Stop preview'
-                      : 'Start preview',
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: isConnecting
-                      ? context.theme.grayBgColor
-                      : context.theme.primaryColor,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.all(4),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
+            // ),
+            if (!isConnected && !isConnecting)
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: CommonButton(
+                  label: 'Thử kết nối lại',
+                  icon: Feather.refresh_cw,
+                  onPressed: () {
+                    context.read<RootBloc>().add(const ConnectDeviceEvent());
+                  },
                 ),
               ),
-            ),
           ],
         );
       },
     );
   }
 
-  Widget _buildPlaceholder(bool isLoading) {
+  Widget _buildPlaceholder(BuildContext context, bool isLoading) {
     return Container(
-      decoration: BoxDecoration(color: Color(0XFF101828)),
+      color: const Color(0XFF101828),
       child: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            if (isLoading)
-              CircularProgressIndicator(color: Colors.white)
-            else
-              Icon(Icons.videocam_off, size: 64, color: Colors.grey),
-            SizedBox(height: 16),
+            Icon(
+              Icons.videocam_off_outlined,
+              size: 48,
+              color: Colors.white.withAlpha(50),
+            ),
+            const SizedBox(height: 16),
             Text(
-              isLoading ? 'Connecting...' : 'Camera not connected',
+              isLoading ? 'Đang thiết lập kết nối...' : 'Chưa kết nối thiết bị',
               style: TextStyle(
-                color: Color(0XFF99A1AF),
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
+                color: Colors.white.withAlpha(200),
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
               ),
             ),
-            SizedBox(height: 8),
+            const SizedBox(height: 4),
             Text(
-              isLoading ? 'Please wait' : 'Click Start to begin streaming',
-              style: TextStyle(color: Colors.grey, fontSize: 14),
+              isLoading
+                  ? 'Vui lòng đợi trong giây lát'
+                  : 'Nhấn nút bên dưới để bắt đầu',
+              style: TextStyle(
+                color: Colors.white.withAlpha(125),
+                fontSize: 13,
+              ),
             ),
           ],
         ),

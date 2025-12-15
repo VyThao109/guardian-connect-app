@@ -29,9 +29,11 @@ class _LocationTabState extends State<LocationTab> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      setState(() {
-        mapReady = true;
-      });
+      if (mounted) {
+        setState(() {
+          mapReady = true;
+        });
+      }
     });
     _loadLocation();
   }
@@ -49,19 +51,19 @@ class _LocationTabState extends State<LocationTab> {
   Widget build(BuildContext context) {
     return BlocBuilder<RootBloc, RootState>(
       builder: (context, state) {
-        final currentLocation =
-            state.currentLocation ?? LatLng(16.0544, 108.2022);
-        final address = state.address ?? 'Loading...';
+        final hasGPSData = state.hasReceivedGPSData;
+        final isConnected = state.isConnected;
+        final currentLocation = state.currentLocation;
+        final address = state.address;
         final lastUpdate = state.lastUpdate;
-        final gpsStatus = state.isGpsConnected;
 
-        // final double? distance = (userLocation != null)
-        //     ? MapHelper.calculateDistance(currentLocation, userLocation!)
-        //     : null;
-
-        // final String? estTime = (distance != null)
-        //     ? MapHelper.estimateTravelTime(distance)
-        //     : null;
+        // 1. Nếu có vị trí Rasp -> Dùng Rasp
+        // 2. Nếu không, dùng vị trí điện thoại (userLocation)
+        // 3. Nếu không, dùng mặc định (VD: Hà Nội/Đà Nẵng) để tránh màn hình xám
+        final LatLng displayLocation =
+            currentLocation ??
+            userLocation ??
+            const LatLng(16.047079, 108.206230); // Default Da Nang
 
         return SingleChildScrollView(
           child: Container(
@@ -86,7 +88,7 @@ class _LocationTabState extends State<LocationTab> {
                       spacing: 2,
                       children: [
                         Text(
-                          'Location Tracking',
+                          'Theo dõi vị trí',
                           style: TextStyle(
                             fontSize: FontSizes.large,
                             fontWeight: FontWeight.w700,
@@ -94,7 +96,7 @@ class _LocationTabState extends State<LocationTab> {
                           ),
                         ),
                         Text(
-                          'Real-time location updates',
+                          'Cập nhật vị trí thời gian thực',
                           style: TextStyle(
                             fontSize: FontSizes.small,
                             fontWeight: FontWeight.normal,
@@ -105,8 +107,8 @@ class _LocationTabState extends State<LocationTab> {
                     ),
                     Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 4,
-                        vertical: 2,
+                        horizontal: 8,
+                        vertical: 4,
                       ),
                       decoration: BoxDecoration(
                         color: Colors.black,
@@ -117,21 +119,27 @@ class _LocationTabState extends State<LocationTab> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Container(
-                            width: 6,
-                            height: 6,
+                            width: 8,
+                            height: 8,
                             decoration: BoxDecoration(
-                              color: gpsStatus
-                                  ? context.theme.green
-                                  : context.theme.grayBgColor,
+                              color: isConnected
+                                  ? (hasGPSData
+                                        ? context.theme.green
+                                        : Colors.orange)
+                                  : context.theme.red,
                               shape: BoxShape.circle,
                             ),
                           ),
                           Text(
-                            gpsStatus ? "Active" : "Inactive",
+                            isConnected && hasGPSData
+                                ? "Đang hoạt động"
+                                : isConnected
+                                ? "Chờ dữ liệu..."
+                                : "Mất kết nối",
                             style: TextStyle(
                               color: Colors.white,
                               fontSize: FontSizes.small,
-                              fontWeight: FontWeight.normal,
+                              fontWeight: FontWeight.w500,
                             ),
                           ),
                         ],
@@ -152,7 +160,7 @@ class _LocationTabState extends State<LocationTab> {
                             child: FlutterMap(
                               mapController: _mapController,
                               options: MapOptions(
-                                initialCenter: currentLocation,
+                                initialCenter: displayLocation,
                                 initialZoom: 15,
                                 interactionOptions: const InteractionOptions(
                                   flags: InteractiveFlag.all,
@@ -165,93 +173,107 @@ class _LocationTabState extends State<LocationTab> {
                               ),
                               children: [
                                 TileLayer(
-                                  urlTemplate:
-                                      'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                                  urlTemplate: isSatelliteView
+                                      ? 'https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}'
+                                      : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                                  subdomains: const [
+                                    'mt0',
+                                    'mt1',
+                                    'mt2',
+                                    'mt3',
+                                  ],
                                   userAgentPackageName:
                                       'com.example.guardian_connect',
                                 ),
                                 MarkerLayer(
                                   markers: [
-                                    Marker(
-                                      point: currentLocation,
-                                      width: 80,
-                                      height: 80,
-                                      child: Icon(
-                                        Icons.location_on,
-                                        color: context.theme.red,
-                                        size: 40,
+                                    if (currentLocation != null)
+                                      Marker(
+                                        point: currentLocation,
+                                        width: 80,
+                                        height: 80,
+                                        child: Icon(
+                                          Icons.location_on,
+                                          color: context.theme.red,
+                                          size: 40,
+                                        ),
                                       ),
-                                    ),
+                                    if (userLocation != null)
+                                      Marker(
+                                        point: userLocation!,
+                                        width: 40,
+                                        height: 40,
+                                        child: Container(
+                                          decoration: BoxDecoration(
+                                            color:
+                                                (context.theme.primaryColor ??
+                                                        Colors.blue)
+                                                    .withAlpha(50),
+                                            shape: BoxShape.circle,
+                                            border: Border.all(
+                                              color:
+                                                  context.theme.primaryColor ??
+                                                  Colors.blue,
+                                              width: 2,
+                                            ),
+                                          ),
+                                          child: Icon(
+                                            Icons.circle,
+                                            color:
+                                                context.theme.primaryColor ??
+                                                Colors.blue,
+                                            size: 15,
+                                          ),
+                                        ),
+                                      ),
                                   ],
                                 ),
                               ],
                             ),
                           ),
                         ),
+
+                        // Các nút điều khiển bản đồ giữ nguyên
                         Positioned(
                           bottom: 10,
                           left: 10,
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(8),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withAlpha(62),
-                                  blurRadius: 4,
-                                  offset: const Offset(0, 4),
-                                ),
-                              ],
-                            ),
-                            child: IconButton(
-                              onPressed: () => FunctionsHelper.recenterMap(
-                                _mapController,
-                                context,
-                              ),
-                              icon: Icon(Entypo.location, size: 24),
-                              style: IconButton.styleFrom(
-                                backgroundColor: Colors.white,
-                                foregroundColor: Colors.black,
-                                padding: const EdgeInsets.all(4),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                              ),
+                          child: mapButton(
+                            icon: Entypo.location,
+                            onPressed: () => FunctionsHelper.recenterMap(
+                              _mapController,
+                              context,
                             ),
                           ),
                         ),
                         Positioned(
                           bottom: 10,
                           right: 10,
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(8),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withAlpha(62),
-                                  blurRadius: 4,
-                                  offset: const Offset(0, 4),
-                                ),
-                              ],
-                            ),
-                            child: IconButton(
-                              onPressed: () =>
-                                  openFullMapDialog(context, currentLocation),
-                              icon: Icon(Entypo.resize_full_screen, size: 24),
-                              style: IconButton.styleFrom(
-                                backgroundColor: Colors.white,
-                                foregroundColor: Colors.black,
-                                padding: const EdgeInsets.all(4),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                              ),
+                          child: mapButton(
+                            icon: isSatelliteView
+                                ? Icons.map
+                                : Icons.satellite_alt,
+                            onPressed: () {
+                              setState(() {
+                                isSatelliteView = !isSatelliteView;
+                              });
+                            },
+                          ),
+                        ),
+                        Positioned(
+                          top: 10,
+                          right: 10,
+                          child: mapButton(
+                            icon: Entypo.resize_full_screen,
+                            onPressed: () => openFullMapDialog(
+                              context,
+                              currentLocation ?? displayLocation,
                             ),
                           ),
                         ),
                       ],
                     ),
+
+                    // Thông tin chi tiết
                     Padding(
                       padding: const EdgeInsets.all(8),
                       child: Column(
@@ -259,40 +281,34 @@ class _LocationTabState extends State<LocationTab> {
                         children: [
                           buildLocationInfoRow(
                             context,
-                            "Latitude",
-                            currentLocation.latitude.toString(),
+                            "Vĩ độ",
+                            currentLocation?.latitude.toString() ??
+                                "Đang cập nhật...",
                           ),
                           buildLocationInfoRow(
                             context,
-                            "Longtitude",
-                            currentLocation.longitude.toString(),
+                            "Kinh độ",
+                            currentLocation?.longitude.toString() ??
+                                "Đang cập nhật...",
                           ),
                           buildLocationInfoRow(
                             context,
-                            "Address",
-                            address.toString(),
+                            "Địa chỉ",
+                            address ?? "Đang cập nhật...",
                           ),
-                          buildLocationInfoRow(context, "Accuracy", "+20m"),
-                          // buildLocationInfoRow(
-                          //   context,
-                          //   "Distance",
-                          //   distance != null
-                          //       ? "${(distance / 1000).toStringAsFixed(2)} km"
-                          //       : "Loading...",
-                          // ),
-                          // buildLocationInfoRow(
-                          //   context,
-                          //   "Est. Time",
-                          //   estTime ?? "Loading...",
-                          // ),
                           buildLocationInfoRow(
                             context,
-                            "Last update",
+                            "Độ chính xác",
+                            hasGPSData ? "Cao" : "--",
+                          ),
+                          buildLocationInfoRow(
+                            context,
+                            "Cập nhật cuối",
                             lastUpdate != null
                                 ? DateFormat(
-                                    'dd/MM/yyyy HH:mm:ss',
+                                    'HH:mm:ss dd/MM/yyyy',
                                   ).format(lastUpdate)
-                                : "Not valid",
+                                : "--/--/----",
                           ),
                         ],
                       ),
@@ -301,26 +317,31 @@ class _LocationTabState extends State<LocationTab> {
                 ),
 
                 DualActionButtons(
-                  label1: "Refresh",
-                  label2: "Open Maps",
-                  icon1: Feather.refresh_ccw,
+                  label1: "Làm mới",
+                  label2: "Chỉ đường",
+                  icon1: Feather.refresh_cw,
                   icon2: Feather.navigation,
                   onPressed1: () {
-                    //refresh connect to gps
+                    // Nếu chưa kết nối thì thử kết nối lại
+                    if (!isConnected) {
+                      context.read<RootBloc>().add(const ConnectDeviceEvent());
+                    }
                   },
                   onPressed2: () async {
-                    final rootState = context.read<RootBloc>().state;
-                    final companionLocation = rootState.currentLocation;
-                    final userLocation = await MapHelper.getCurrentLocation();
-
-                    if (companionLocation != null && userLocation != null) {
+                    if (currentLocation != null && userLocation != null) {
                       await MapHelper.openMapsNavigation(
                         context: context,
-                        origin: LatLng(
-                          userLocation.latitude,
-                          userLocation.longitude,
+                        origin: userLocation, // Đã có sẵn latlong
+                        destination: currentLocation,
+                      );
+                    } else {
+                      // Thông báo nếu chưa có toạ độ
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            "Chưa có thông tin vị trí để chỉ đường",
+                          ),
                         ),
-                        destination: companionLocation,
                       );
                     }
                   },
@@ -333,7 +354,9 @@ class _LocationTabState extends State<LocationTab> {
     );
   }
 
-  void openFullMapDialog(BuildContext context, LatLng currentLocation) {
+  void openFullMapDialog(BuildContext context, LatLng centerLocation) {
+    final MapController localMapController = MapController();
+
     showGeneralDialog(
       context: context,
       barrierDismissible: true,
@@ -345,9 +368,9 @@ class _LocationTabState extends State<LocationTab> {
             return Stack(
               children: [
                 FlutterMap(
-                  mapController: _mapController,
+                  mapController: localMapController,
                   options: MapOptions(
-                    initialCenter: currentLocation,
+                    initialCenter: centerLocation,
                     initialZoom: 15,
                     interactionOptions: const InteractionOptions(
                       flags: InteractiveFlag.all,
@@ -356,15 +379,16 @@ class _LocationTabState extends State<LocationTab> {
                   children: [
                     TileLayer(
                       urlTemplate: isSatelliteView
-                          ? 'https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}' // satellite
-                          : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', // normal
+                          ? 'https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}'
+                          : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                       subdomains: const ['mt0', 'mt1', 'mt2', 'mt3'],
                       userAgentPackageName: 'com.example.guardian_connect',
                     ),
                     MarkerLayer(
                       markers: [
+                        // Marker 1: Rasp hoặc Default
                         Marker(
-                          point: currentLocation,
+                          point: centerLocation,
                           width: 80,
                           height: 80,
                           child: Icon(
@@ -373,23 +397,51 @@ class _LocationTabState extends State<LocationTab> {
                             size: 40,
                           ),
                         ),
+
+                        // Marker 2: Vị trí điện thoại của bạn
+                        if (userLocation != null)
+                          Marker(
+                            point: userLocation!,
+                            width: 40,
+                            height: 40,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color:
+                                    (context.theme.primaryColor ?? Colors.blue)
+                                        .withAlpha(50),
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color:
+                                      context.theme.primaryColor ?? Colors.blue,
+                                  width: 2,
+                                ),
+                              ),
+                              child: Icon(
+                                Icons.circle,
+                                color:
+                                    context.theme.primaryColor ?? Colors.blue,
+                                size: 15,
+                              ),
+                            ),
+                          ),
                       ],
                     ),
                   ],
                 ),
 
-                // Recenter button
+                // Các nút điều khiển (Sửa lại để dùng localMapController)
                 Positioned(
                   bottom: 10,
                   left: 10,
                   child: mapButton(
                     icon: Entypo.location,
-                    onPressed: () =>
-                        FunctionsHelper.recenterMap(_mapController, context),
+                    onPressed: () => FunctionsHelper.recenterMap(
+                      localMapController, // Recenter map
+                      context,
+                    ),
                   ),
                 ),
 
-                // Switch map type
                 Positioned(
                   bottom: 10,
                   right: 10,
@@ -403,7 +455,6 @@ class _LocationTabState extends State<LocationTab> {
                   ),
                 ),
 
-                //  Close button
                 Positioned(
                   top: 30,
                   right: 10,
@@ -474,12 +525,17 @@ class _LocationTabState extends State<LocationTab> {
             fontWeight: FontWeight.normal,
           ),
         ),
-        Text(
-          value,
-          style: const TextStyle(
-            color: Colors.black,
-            fontSize: FontSizes.medium,
-            fontWeight: FontWeight.w700,
+        Flexible(
+          child: Text(
+            value,
+            style: const TextStyle(
+              color: Colors.black,
+              fontSize: FontSizes.medium,
+              fontWeight: FontWeight.w700,
+            ),
+            textAlign: TextAlign.right,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ),
       ],

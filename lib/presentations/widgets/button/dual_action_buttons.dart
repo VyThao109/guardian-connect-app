@@ -8,6 +8,7 @@ class DualActionButtons extends StatelessWidget {
   final IconData icon2;
   final VoidCallback onPressed1;
   final VoidCallback onPressed2;
+  final bool isBtn2Emergency;
 
   const DualActionButtons({
     super.key,
@@ -17,6 +18,7 @@ class DualActionButtons extends StatelessWidget {
     required this.icon2,
     required this.onPressed1,
     required this.onPressed2,
+    this.isBtn2Emergency = false,
   });
 
   @override
@@ -53,7 +55,7 @@ class DualActionButtons extends StatelessWidget {
             icon: Icon(icon2, size: 20),
             label: Text(label2),
             style: TextButton.styleFrom(
-              backgroundColor: label2 == "Emergency call"
+              backgroundColor: isBtn2Emergency
                   ? context.theme.red
                   : context.theme.primaryColor,
               foregroundColor: Colors.white,

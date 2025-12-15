@@ -5,6 +5,7 @@ import 'package:flutter_vector_icons/flutter_vector_icons.dart';
 import 'package:guardian_connect_app/bloc/root_bloc.dart';
 import 'package:guardian_connect_app/common/extensions/custom_theme_extension.dart';
 import 'package:guardian_connect_app/common/extensions/font_sizes.dart';
+import 'package:guardian_connect_app/presentations/widgets/button/common_button.dart';
 import 'package:guardian_connect_app/presentations/widgets/snackbar/custom_snackbar.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -90,8 +91,8 @@ class _ContactModalState extends State<ContactModal> {
 
     CustomSnackbar.showSnackBar(
       context,
-      "Successfully",
-      "Phone number updated successfully",
+      "Thành công",
+      "Đã cập nhật số người thân",
       AlertType.success,
     );
   }
@@ -111,7 +112,7 @@ class _ContactModalState extends State<ContactModal> {
         spacing: 20,
         children: [
           const Text(
-            'Contact Companion',
+            'Liên lạc với người thân',
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
@@ -143,10 +144,10 @@ class _ContactModalState extends State<ContactModal> {
                           size: 20,
                         ),
                         onPressed: startEditing,
-                        tooltip: 'Edit phone number',
+                        tooltip: 'Cập nhật số điện thoại',
                       )
                     : null,
-                hintText: 'Enter phone number',
+                hintText: 'Nhập số điện thoại',
                 border: InputBorder.none,
               ),
               inputFormatters: [
@@ -154,33 +155,16 @@ class _ContactModalState extends State<ContactModal> {
               ],
             ),
           ),
-          _isEditing ? buildEditButtons(context) : buildCallButton(),
+          _isEditing
+              ? buildEditButtons(context)
+              : SizedBox(
+                  width: double.infinity,
+                  child: CommonButton(
+                    label: 'Gọi ngay',
+                    onPressed: makePhoneCall,
+                  ),
+                ),
         ],
-      ),
-    );
-  }
-
-  Widget buildCallButton() {
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton(
-        onPressed: makePhoneCall,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.blue,
-          foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          elevation: 2,
-        ),
-        child: const Text(
-          'Call Now',
-          style: TextStyle(
-            fontSize: FontSizes.medium,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
       ),
     );
   }
@@ -196,7 +180,7 @@ class _ContactModalState extends State<ContactModal> {
             style: TextButton.styleFrom(
               backgroundColor: context.theme.blue300,
               foregroundColor: context.theme.blue,
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+              padding: const EdgeInsets.symmetric(vertical: 12),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),
                 side: BorderSide(
@@ -205,22 +189,11 @@ class _ContactModalState extends State<ContactModal> {
                 ),
               ),
             ),
-            child: Text("Cancel"),
+            child: Text("Hủy"),
           ),
         ),
         Expanded(
-          child: TextButton(
-            onPressed: savePhoneNumber,
-            style: TextButton.styleFrom(
-              backgroundColor: context.theme.primaryColor,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-            child: Text("Save"),
-          ),
+          child: CommonButton(label: "Lưu", onPressed: savePhoneNumber),
         ),
       ],
     );
