@@ -54,45 +54,33 @@ class SettingScreen extends StatelessWidget {
                   _buildSettingTile(
                     context,
                     icon: Feather.wifi,
-                    title:
-                        "Địa chỉ kết nối (IP/Domain)", // Đổi title cho rõ nghĩa
+                    title: "Địa chỉ kết nối (IP/Domain)",
                     subtitle: state.deviceIp,
                     iconColor: context.theme.primaryColor ?? Colors.blue,
                     onTap: () => _showEditBottomSheet(
                       context,
                       title: "Cập nhật địa chỉ",
                       currentValue: state.deviceIp,
-                      // 1. Đổi kiểu bàn phím sang URL để nhập được cả số và chữ
                       inputType: TextInputType.url,
-                      // 2. Cập nhật gợi ý đa dạng hơn
                       hint: "VD: 192.168.1.10 hoặc my-app.ngrok.io",
                       validator: (value) {
                         if (value == null || value.isEmpty) {
                           return "Địa chỉ không được để trống";
                         }
 
-                        // Regex check IP V4 (Giữ nguyên)
+                        // 1. SỬA REGEX IP: Thêm đoạn (?:http:\/\/|https:\/\/)? ở đầu
+                        // Để chấp nhận cả "192.168.1.1" và "http://192.168.1.1"
                         final ipRegex = RegExp(
-                          r'^(?:[0-9]{1,3}\.){3}[0-9]{1,3}(?::\d+)?$',
+                          r'^(?:http:\/\/|https:\/\/)?(?:[0-9]{1,3}\.){3}[0-9]{1,3}(?::\d+)?$',
                         );
 
-                        // Regex check Domain/URL (BỎ COMMENT VÀ CẬP NHẬT)
-                        // Regex này chấp nhận:
-                        // - Domain thường: google.com
-                        // - Subdomain nhiều cấp: ai.myidvndut.id.vn
-                        // - Domain kèm port: myserver.net:8080
-                        // - Chấp nhận cả http:// hoặc https:// ở đầu (để user đỡ bị rối)
+                        // Regex Domain (Giữ nguyên)
                         final domainRegex = RegExp(
                           r'^(http:\/\/|https:\/\/)?([a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}(:\d+)?(\/.*)?$',
                         );
 
-                        // Check localhost
-                        final isLocalhost = value.contains(
-                          'localhost',
-                        ); // Dùng contains để chấp nhận localhost:8000
+                        final isLocalhost = value.contains('localhost');
 
-                        // Kiểm tra tổng hợp
-                        // Nếu KHÔNG phải IP VÀ KHÔNG phải Domain VÀ KHÔNG phải Localhost -> Lỗi
                         if (!ipRegex.hasMatch(value) &&
                             !domainRegex.hasMatch(value) &&
                             !isLocalhost) {
@@ -102,10 +90,9 @@ class SettingScreen extends StatelessWidget {
                         return null;
                       },
                       onSave: (val) {
-                        // Cắt khoảng trắng thừa
                         String formattedUrl = val.trim();
 
-                        // Xử lý dấu / ở cuối (nếu có)
+                        // Xóa dấu / ở cuối
                         if (formattedUrl.endsWith("/")) {
                           formattedUrl = formattedUrl.substring(
                             0,
@@ -113,28 +100,49 @@ class SettingScreen extends StatelessWidget {
                           );
                         }
 
-                        // Kiểm tra xem đã có protocol (http/https) chưa
-                        bool hasProtocol =
-                            formattedUrl.startsWith("http://") ||
-                            formattedUrl.startsWith("https://");
+                        // --- LOGIC XỬ LÝ MỚI ---
 
-                        if (!hasProtocol) {
-                          // Regex kiểm tra xem chuỗi có phải là IP không (hỗ trợ cả port, vd: 192.168.1.10:8000)
-                          // Giải thích: 3 nhóm số đầu + dấu chấm, nhóm số cuối, optional port (:xxxx)
-                          final ipRegex = RegExp(
-                            r'^(?:[0-9]{1,3}\.){3}[0-9]{1,3}(?::\d+)?$',
-                          );
+                        // Bước 1: Xác định xem đây có phải là IP không (bỏ qua http/https để check)
+                        // Loại bỏ protocol tạm thời để kiểm tra format số
+                        String rawUrl = formattedUrl.replaceFirst(
+                          RegExp(r'^https?:\/\/'),
+                          '',
+                        );
 
-                          if (ipRegex.hasMatch(formattedUrl)) {
-                            // Nếu đúng format IP -> Thêm HTTP
-                            formattedUrl = "http://$formattedUrl";
+                        // Regex check IP thuần (vd: 192.168.1.1 hoặc 192.168.1.1:8000)
+                        final ipCheckRegex = RegExp(
+                          r'^(?:[0-9]{1,3}\.){3}[0-9]{1,3}(?::\d+)?$',
+                        );
+                        bool isIp = ipCheckRegex.hasMatch(rawUrl);
+
+                        if (isIp) {
+                          // --- XỬ LÝ TRƯỜNG HỢP LÀ IP ---
+
+                          // 1. Kiểm tra và thêm PORT :8000 nếu chưa có
+                          if (!rawUrl.contains(':')) {
+                            rawUrl = '$rawUrl:8000';
+                          }
+
+                          // 2. Đảm bảo Protocol là HTTP (IP thường dùng http)
+                          // Nếu user nhập https thì giữ nguyên, nếu không có gì thì thêm http
+                          if (formattedUrl.startsWith("https://")) {
+                            formattedUrl = "https://$rawUrl";
                           } else {
-                            // Các trường hợp còn lại (ngrok, cloudflare, tên miền...) -> Thêm HTTPS
+                            formattedUrl = "http://$rawUrl";
+                          }
+                        } else {
+                          // --- XỬ LÝ TRƯỜNG HỢP LÀ DOMAIN/NGROK ---
+
+                          // Nếu chưa có protocol -> Thêm https
+                          bool hasProtocol =
+                              formattedUrl.startsWith("http://") ||
+                              formattedUrl.startsWith("https://");
+                          if (!hasProtocol) {
                             formattedUrl = "https://$formattedUrl";
                           }
                         }
 
-                        // Lưu url chuẩn, vd: http://192.168.1.10:8000 hoặc https://my-app.ngrok.io)
+                        // Lưu vào Bloc
                         context.read<RootBloc>().add(
                           UpdateDeviceIpEvent(formattedUrl),
                         );
